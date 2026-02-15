@@ -50,18 +50,60 @@ export default function GradeEntry({ section, students, activeSemester }: any) {
         students: students,
     });
 
+    /**
+     * Helper to determine the rating based on the calculated score.
+     */
+    const getLetterGrade = (score: number) => {
+        if (score <= 0) return '0.00';
+        if (score >= 95) return '1.00';
+        if (score >= 90) return '1.25';
+        if (score >= 85) return '1.50';
+        if (score >= 80) return '1.75';
+        if (score >= 75) return '3.00';
+        return '5.00';
+    };
+
+    /**
+     * Handles real-time input and auto-calculates totals.
+     */
     const handleInput = (index: number, field: string, value: string) => {
-        const updated = [...data.students];
-        updated[index].grade[field] = value;
         setData((prev: any) => {
             const updatedStudents = [...prev.students];
 
-            // Ensure the path to the field exists
+            // Create a temporary copy of the current grade object with the new value
+            const currentGrade = {
+                ...updatedStudents[index].grade,
+                [field]: value,
+            };
+
+            // Extract values for calculation (default to 0 if empty/invalid)
+            const qas = parseFloat(currentGrade[`qas_${semSuffix}`]) || 0;
+            const gaca = parseFloat(currentGrade[`gaca_${semSuffix}`]) || 0;
+            const attend =
+                parseFloat(currentGrade[`attendance_${semSuffix}`]) || 0;
+            const midterm =
+                parseFloat(currentGrade[`m_exam_${semSuffix}`]) || 0;
+            const finalEx =
+                parseFloat(currentGrade[`f_exam_${semSuffix}`]) || 0;
+            const output = parseFloat(currentGrade[`output_${semSuffix}`]) || 0;
+
+            // WEIGHTED FORMULA:
+            // QAS (20%) + GACA (20%) + Attendance (10%) + Exams Avg (25%) + Output (25%)
+            const totalScore =
+                qas * 0.2 +
+                gaca * 0.2 +
+                attend * 0.1 +
+                ((midterm + finalEx) / 2) * 0.25 +
+                output * 0.25;
+
+            // Update the student record in state
             updatedStudents[index] = {
                 ...updatedStudents[index],
                 grade: {
-                    ...updatedStudents[index].grade,
-                    [field]: value,
+                    ...currentGrade,
+                    [`total_grade_${semSuffix}`]: totalScore.toFixed(2),
+                    letter_grade: getLetterGrade(totalScore),
+                    remarks: totalScore >= 75 ? 'PASSED' : 'FAILED',
                 },
             };
 
@@ -82,7 +124,7 @@ export default function GradeEntry({ section, students, activeSemester }: any) {
     return (
         <AppLayout
             breadcrumbs={[
-                { title: 'My Grades', href: '/professor/grades' },
+                { title: 'My Grades', href: '/manage-grades' },
                 { title: 'Entry', href: '#' },
             ]}
         >
@@ -99,7 +141,7 @@ export default function GradeEntry({ section, students, activeSemester }: any) {
                                 <CardTitle className="text-xl font-bold tracking-tight text-slate-900 uppercase">
                                     {section.subject.subject_title}
                                 </CardTitle>
-                                <p className="font-mono text-sm text-slate-500">
+                                <p className="font-mono text-sm text-slate-500 uppercase">
                                     {section.subject.subject_code} —{' '}
                                     {activeSemester} Semester
                                 </p>
@@ -108,9 +150,9 @@ export default function GradeEntry({ section, students, activeSemester }: any) {
                         <Button
                             variant="outline"
                             onClick={() => window.history.back()}
-                            className="cursor-pointer border-slate-200"
+                            className="cursor-pointer border-slate-200 text-[10px] font-bold tracking-widest uppercase"
                         >
-                            <ArrowLeft className="mr-2 h-4 w-4" /> Back
+                            <ArrowLeft className="mr-2 h-4 w-4" /> Exit Entry
                         </Button>
                     </CardHeader>
                 </Card>
@@ -120,8 +162,8 @@ export default function GradeEntry({ section, students, activeSemester }: any) {
                         <CardHeader className="border-b bg-slate-50/50 py-3">
                             <div className="flex items-center gap-2">
                                 <Calculator className="h-4 w-4 text-slate-400" />
-                                <span className="text-[10px] font-bold tracking-widest text-slate-500 uppercase">
-                                    Input Ledger
+                                <span className="text-[10px] font-black tracking-widest text-slate-500 uppercase">
+                                    Official Grade Ledger
                                 </span>
                             </div>
                         </CardHeader>
@@ -130,7 +172,7 @@ export default function GradeEntry({ section, students, activeSemester }: any) {
                                 <TableHeader className="bg-slate-50/80">
                                     <TableRow className="hover:bg-transparent">
                                         <TableHead className="py-4 pl-6 text-[10px] font-bold tracking-widest text-slate-500 uppercase">
-                                            Student
+                                            Student Info
                                         </TableHead>
                                         <TableHead className="w-20 text-center text-[10px] font-bold text-slate-500 uppercase">
                                             QAS
@@ -167,18 +209,21 @@ export default function GradeEntry({ section, students, activeSemester }: any) {
                                             >
                                                 <TableCell className="py-4 pl-6">
                                                     <div className="flex flex-col">
-                                                        <span className="text-xs font-bold text-slate-900 uppercase">
+                                                        <span className="text-xs font-black text-slate-900 uppercase">
                                                             {row.student_name}
                                                         </span>
-                                                        <span className="font-mono text-[10px] text-slate-400">
+                                                        <span className="font-mono text-[10px] font-bold text-slate-400">
                                                             {row.school_id}
                                                         </span>
                                                     </div>
                                                 </TableCell>
+
+                                                {/* Inputs for Grade Components */}
                                                 <TableCell>
                                                     <Input
-                                                        className="h-8 text-center text-xs"
+                                                        className="h-8 w-[100px] text-center text-xs"
                                                         type="number"
+                                                        step="0.01"
                                                         value={
                                                             row.grade[
                                                                 `qas_${semSuffix}` as keyof GradeRecord
@@ -195,8 +240,9 @@ export default function GradeEntry({ section, students, activeSemester }: any) {
                                                 </TableCell>
                                                 <TableCell>
                                                     <Input
-                                                        className="h-8 text-center text-xs"
+                                                        className="h-8 w-[100px] text-center text-xs"
                                                         type="number"
+                                                        step="0.01"
                                                         value={
                                                             row.grade[
                                                                 `gaca_${semSuffix}` as keyof GradeRecord
@@ -213,8 +259,9 @@ export default function GradeEntry({ section, students, activeSemester }: any) {
                                                 </TableCell>
                                                 <TableCell>
                                                     <Input
-                                                        className="h-8 text-center text-xs"
+                                                        className="h-8 w-[100px] text-center text-xs"
                                                         type="number"
+                                                        step="0.01"
                                                         value={
                                                             row.grade[
                                                                 `attendance_${semSuffix}` as keyof GradeRecord
@@ -231,8 +278,9 @@ export default function GradeEntry({ section, students, activeSemester }: any) {
                                                 </TableCell>
                                                 <TableCell>
                                                     <Input
-                                                        className="h-8 text-center text-xs"
+                                                        className="h-8 w-[100px] text-center text-xs"
                                                         type="number"
+                                                        step="0.01"
                                                         value={
                                                             row.grade[
                                                                 `m_exam_${semSuffix}` as keyof GradeRecord
@@ -249,8 +297,9 @@ export default function GradeEntry({ section, students, activeSemester }: any) {
                                                 </TableCell>
                                                 <TableCell>
                                                     <Input
-                                                        className="h-8 text-center text-xs"
+                                                        className="h-8 w-[100px] text-center text-xs"
                                                         type="number"
+                                                        step="0.01"
                                                         value={
                                                             row.grade[
                                                                 `f_exam_${semSuffix}` as keyof GradeRecord
@@ -267,8 +316,9 @@ export default function GradeEntry({ section, students, activeSemester }: any) {
                                                 </TableCell>
                                                 <TableCell>
                                                     <Input
-                                                        className="h-8 text-center text-xs"
+                                                        className="h-8 w-[100px] text-center text-xs"
                                                         type="number"
+                                                        step="0.01"
                                                         value={
                                                             row.grade[
                                                                 `output_${semSuffix}` as keyof GradeRecord
@@ -283,28 +333,21 @@ export default function GradeEntry({ section, students, activeSemester }: any) {
                                                         }
                                                     />
                                                 </TableCell>
+
+                                                {/* Auto-Calculated Total */}
                                                 <TableCell className="bg-slate-50/50">
-                                                    <Input
-                                                        className="h-8 border-slate-300 text-center text-xs font-black"
-                                                        type="number"
-                                                        value={
-                                                            row.grade[
-                                                                `total_grade_${semSuffix}` as keyof GradeRecord
-                                                            ] || ''
-                                                        }
-                                                        onChange={(e) =>
-                                                            handleInput(
-                                                                index,
-                                                                `total_grade_${semSuffix}`,
-                                                                e.target.value,
-                                                            )
-                                                        }
-                                                    />
+                                                    <div className="text-center font-mono text-xs font-black text-slate-900">
+                                                        {row.grade[
+                                                            `total_grade_${semSuffix}` as keyof GradeRecord
+                                                        ] || '0.00'}
+                                                    </div>
                                                 </TableCell>
+
+                                                {/* Rating Badge */}
                                                 <TableCell>
                                                     <Badge
                                                         variant="outline"
-                                                        className="w-full justify-center border-slate-900 bg-slate-900 text-[10px] font-black text-white"
+                                                        className={`w-full justify-center border-slate-900 text-[10px] font-black ${row.grade.letter_grade === '5.00' ? 'border-red-200 bg-red-50 text-red-600' : 'bg-slate-900 text-white'}`}
                                                     >
                                                         {row.grade
                                                             .letter_grade ||
@@ -323,10 +366,12 @@ export default function GradeEntry({ section, students, activeSemester }: any) {
                         <Button
                             type="submit"
                             disabled={processing}
-                            className="cursor-pointer bg-slate-900 px-12 py-6 text-xs font-black text-white shadow-2xl transition-all hover:bg-slate-800 active:scale-95"
+                            className="bg-slate-900 px-12 py-6 text-[11px] font-black tracking-[0.2em] text-white uppercase shadow-2xl transition-all hover:bg-slate-800 active:scale-95"
                         >
-                            <Save className="mr-2 h-4 w-4" />{' '}
-                            {processing ? 'SYNCHRONIZING...' : 'COMMIT CHANGES'}
+                            <Save className="mr-2 h-4 w-4" />
+                            {processing
+                                ? 'Synchronizing Ledger...'
+                                : 'Commit Changes to Database'}
                         </Button>
                     </div>
                 </form>

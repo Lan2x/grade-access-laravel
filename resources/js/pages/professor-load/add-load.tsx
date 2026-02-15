@@ -10,9 +10,10 @@ import {
 import AppLayout from '@/layouts/app-layout';
 import professorLoads from '@/routes/professor-loads';
 import { type BreadcrumbItem } from '@/types';
-import { Head, router, useForm } from '@inertiajs/react';
+import { Head, router, useForm, usePage } from '@inertiajs/react';
 import { ArrowLeft, BookPlus } from 'lucide-react';
-import { FormEvent } from 'react';
+import { FormEvent, useEffect } from 'react';
+import { toast } from 'sonner';
 
 interface Props {
     professors: { id: number; name: string; school_id: string }[];
@@ -36,6 +37,9 @@ export default function AddLoad({ professors, sections, activePeriod }: Props) {
         academic_period_id: activePeriod?.id || '',
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { flash } = usePage().props as any;
+
     const onSubmit = (e: FormEvent) => {
         e.preventDefault();
         post(professorLoads.store().url, {
@@ -43,6 +47,15 @@ export default function AddLoad({ professors, sections, activePeriod }: Props) {
             onError: (errors) => console.log('Validation Errors:', errors),
         });
     };
+
+    useEffect(() => {
+        if (flash?.message) {
+            toast.success(flash.message);
+        }
+        if (flash?.error) {
+            toast.error(flash.error);
+        }
+    }, [flash]); // Re-run whenever flash changes
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>

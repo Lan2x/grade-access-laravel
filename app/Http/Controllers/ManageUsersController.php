@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Hash;
 
@@ -56,6 +57,7 @@ class ManageUsersController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:users'],
             'role' => ['required', 'string', 'exists:roles,name'], // Ensures role exists in Spatie table
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
         ]);
 
         // 2. Create the User
@@ -64,7 +66,7 @@ class ManageUsersController extends Controller
             'school_id' => $request->school_id,
             'name' => $request->name,
             'email' => $request->email,
-            'password' => Hash::make($request->school_id),
+            'password' => Hash::make($request->password),
         ]);
 
         // 3. Assign the Spatie Role
@@ -96,7 +98,42 @@ class ManageUsersController extends Controller
      */
     public function update(Request $request, User $user)
     {
-        //
+        // 1. Validate the incoming request
+        $validated = $request->validate([
+            'school_id' => [
+                'required',
+                'string',
+                Rule::unique('users')->ignore($user->id) // Ignore current user for unique check
+            ],
+            'name' => ['required', 'string', 'max:255'],
+            'email' => [
+                'required',
+                'string',
+                'email',
+                'max:255',
+                Rule::unique('users')->ignore($user->id) // Ignore current user for unique check
+            ],
+            // Password is optional during update
+            'password' => ['nullable', 'string', 'min:8'],
+        ]);
+
+        // 2. Update basic information
+        $user->fill([
+            'school_id' => $validated['school_id'],
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+        ]);
+
+        // 3. Only update password if it was actually provided
+        if ($request->filled('password')) {
+            $user->password = Hash::make($validated['password']);
+        }
+
+        $user->save();
+
+        // 4. Redirect with a success flash message
+        return redirect()->route('manage-users.index')
+            ->with('message', "Account for {$user->name} has been updated.");
     }
 
     /**

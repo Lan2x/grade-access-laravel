@@ -8,6 +8,7 @@ use App\Models\SubjectAssignment;
 use App\Models\Section;
 use App\Models\User;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\Log;
 
 class ProfessorLoadController
 {
@@ -64,9 +65,8 @@ class ProfessorLoadController
         ]);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
+
+
     public function store(Request $request)
     {
         // 1. Validate the incoming request
@@ -76,31 +76,61 @@ class ProfessorLoadController
             'academic_period_id' => ['required', 'exists:academic_periods,id'],
         ]);
 
-        // 2. Conflict Check: Ensure this specific section isn't already assigned
-        // to someone else in the same academic period.
+        // 2. Conflict Check: Section already taken
         $isSectionTaken = SubjectAssignment::where('section_id', $request->section_id)
             ->where('academic_period_id', $request->academic_period_id)
             ->exists();
 
         if ($isSectionTaken) {
+            // LOG ERROR: Section conflict
+            Log::warning('Professor load assignment failed: Section already assigned.', [
+                'dean_id' => auth()->id(),
+                'attempted_professor_id' => $request->user_id,
+                'section_id' => $request->section_id,
+                'period_id' => $request->academic_period_id
+            ]);
+
             return back()->with('error', 'This section/subject is already assigned to another professor.');
         }
 
-        // 3. Conflict Check: Ensure this professor isn't already assigned 
-        // to this specific section (prevent duplicate entries).
+        // 3. Conflict Check: Duplicate assignment for same professor
         $isAlreadyAssigned = SubjectAssignment::where('user_id', $request->user_id)
             ->where('section_id', $request->section_id)
             ->where('academic_period_id', $request->academic_period_id)
             ->exists();
 
         if ($isAlreadyAssigned) {
+            // LOG ERROR: Duplicate entry attempt
+            Log::warning('Professor load assignment failed: Duplicate assignment.', [
+                'dean_id' => auth()->id(),
+                'professor_id' => $request->user_id,
+                'section_id' => $request->section_id
+            ]);
+
             return back()->with('error', 'This load is already assigned to this professor.');
         }
 
-        // 4. Create the Load Assignment
-        SubjectAssignment::create($validated);
+        try {
+            // 4. Create the Load Assignment
+            SubjectAssignment::create($validated);
 
-        // 5. Redirect back with a success message
+            Log::info('Professor load successfully assigned.', [
+                'dean_id' => auth()->id(),
+                'professor_id' => $request->user_id,
+                'section_id' => $request->section_id
+            ]);
+
+        } catch (\Exception $e) {
+            // LOG CRITICAL ERROR: Database failure
+            Log::error('Database error during professor load assignment.', [
+                'dean_id' => auth()->id(),
+                'error_message' => $e->getMessage(),
+                'payload' => $validated
+            ]);
+
+            return back()->with('error', 'A system error occurred. Please try again later.');
+        }
+
         return redirect()->route('professor-loads.index')
             ->with('message', 'Professor load has been successfully assigned.');
     }

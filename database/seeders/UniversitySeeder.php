@@ -30,7 +30,7 @@ class UniversitySeeder extends Seeder
         User::create([
             'school_id' => 'ADMIN-001',
             'name' => 'University Dean',
-            'email' => 'dean@university.edu',
+            'email' => 'dean@email.com',
             'password' => Hash::make('password'),
         ])->assignRole('dean');
 
@@ -67,8 +67,8 @@ class UniversitySeeder extends Seeder
 
         // 6. Create 2 Professors
         $profs = collect([
-            ['id' => 'PROF-001', 'name' => 'Jeffrey D. Dianito', 'email' => 'jeffrey@university.edu'],
-            ['id' => 'PROF-002', 'name' => 'Maria S. Santos', 'email' => 'maria@university.edu'],
+            ['id' => 'PROF-001', 'name' => 'Professor 1', 'email' => 'professor1@email.com'],
+            ['id' => 'PROF-002', 'name' => 'Professor 2', 'email' => 'professor2@email.com'],
         ])->map(fn($p) => User::create([
                 'school_id' => $p['id'],
                 'name' => $p['name'],
@@ -98,7 +98,7 @@ class UniversitySeeder extends Seeder
         ])->each(fn($name, $i) => User::create([
                 'school_id' => 'STUD-2026-' . str_pad($i + 1, 3, '0', STR_PAD_LEFT),
                 'name' => $name,
-                'email' => strtolower(str_replace(' ', '.', $name)) . '@student.edu',
+                'email' => strtolower(str_replace(' ', '.', $name)) . '@email.com',
                 'password' => Hash::make('password'),
             ])->assignRole('student'));
     }

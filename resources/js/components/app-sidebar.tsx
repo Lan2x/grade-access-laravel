@@ -15,12 +15,16 @@ import manageGrades from '@/routes/manage-grades';
 import manageUsers from '@/routes/manage-users';
 import myGrades from '@/routes/my-grades';
 import professorLoads from '@/routes/professor-loads';
+import professorReports from '@/routes/professor-reports';
 import { SharedData, type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
 import {
+    BookMarked,
     BookOpen,
     Calendar,
+    FileTextIcon,
     GraduationCapIcon,
+    Layers,
     LayoutGrid,
     UsersIcon,
 } from 'lucide-react';
@@ -56,6 +60,16 @@ export function AppSidebar() {
                       icon: UsersIcon,
                   },
                   {
+                      title: 'Subject Registry',
+                      href: '/subjects',
+                      icon: BookMarked,
+                  },
+                  {
+                      title: 'Section Management',
+                      href: '/sections',
+                      icon: Layers,
+                  },
+                  {
                       title: 'Professor Loads',
                       href: professorLoads.index().url,
                       icon: BookOpen,
@@ -75,6 +89,11 @@ export function AppSidebar() {
                       title: 'My Classes',
                       href: manageGrades.index().url,
                       icon: BookOpen,
+                  },
+                  {
+                      title: 'Academic Reports',
+                      href: professorReports.index().url,
+                      icon: FileTextIcon,
                   },
                   // The actual grading sheet is usually reached by clicking a specific class
               ]

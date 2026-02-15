@@ -7,8 +7,11 @@ use App\Http\Controllers\ManageUsersController;
 use App\Http\Controllers\PermissionsController;
 use App\Http\Controllers\Products;
 use App\Http\Controllers\ProfessorLoadController;
+use App\Http\Controllers\ProfessorReportController;
 use App\Http\Controllers\RolesController;
+use App\Http\Controllers\SectionController;
 use App\Http\Controllers\StudentGradeController;
+use App\Http\Controllers\SubjectController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
@@ -37,6 +40,24 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('/', [ManageUsersController::class, 'store'])->name('store');
             Route::put('/{user}', [ManageUsersController::class, 'update'])->name('update');
             Route::delete('/{user}', [ManageUsersController::class, 'destroy'])->name('destroy');
+        });
+
+        Route::prefix('subjects')->name('subjects.')->group(function () {
+            Route::get('/', [SubjectController::class, 'index'])->name('index');
+            Route::get('/create', [SubjectController::class, 'create'])->name('create');
+            Route::get('/{subject}/edit', [SubjectController::class, 'edit'])->name('edit');
+            Route::post('/', [SubjectController::class, 'store'])->name('store');
+            Route::put('/{subject}', [SubjectController::class, 'update'])->name('update');
+            Route::delete('/{subject}', [SubjectController::class, 'destroy'])->name('destroy');
+        });
+
+        Route::prefix('sections')->name('sections.')->group(function () {
+            Route::get('/', [SectionController::class, 'index'])->name('index');
+            Route::get('/create', [SectionController::class, 'create'])->name('create');
+            Route::get('/{section}/edit', [SectionController::class, 'edit'])->name('edit'); // Add this
+            Route::post('/', [SectionController::class, 'store'])->name('store');
+            Route::put('/{section}', [SectionController::class, 'update'])->name('update'); // Add this
+            Route::delete('/{section}', [SectionController::class, 'destroy'])->name('destroy');
         });
 
         Route::prefix('professor-loads')->name('professor-loads.')->group(function () {
@@ -80,6 +101,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('/', [GradeManagementController::class, 'index'])->name('index');
             Route::get('/entry/{section}', [GradeManagementController::class, 'enter'])->name('entry');
             Route::post('/update-batch/{section}', [GradeManagementController::class, 'updateBatch'])->name('update-batch');
+        });
+        Route::prefix('professor-reports')->name('professor-reports.')->group(function () {
+            // Main report selection page
+            Route::get('/', [ProfessorReportController::class, 'index'])->name('index');
+
+            // View/Export Class List with Grades
+            Route::get('/class-list/{section}', [ProfessorReportController::class, 'classList'])->name('class-list');
+
+            // View/Export Individual Student Grade Report
+            Route::get('/student-transcript/{user}/{period}', [ProfessorReportController::class, 'studentTranscript'])->name('student-transcript');
         });
     });
 
